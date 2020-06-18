@@ -1379,6 +1379,9 @@ static int MenuGame()
 	gameSettingsBtn.SetEffectGrow();
 
 	GuiText mainmenuBtnTxt("Main Menu", 22, (GXColor){0, 0, 0, 255});
+	if(GCSettings.AutoloadGame) {
+		mainmenuBtnTxt.SetText("Exit");
+	}
 	GuiImage mainmenuBtnImg(&btnOutline);
 	GuiImage mainmenuBtnImgOver(&btnOutlineOver);
 	GuiButton mainmenuBtn(btnOutline.GetWidth(), btnOutline.GetHeight());
@@ -1581,14 +1584,19 @@ static int MenuGame()
 				delete gameScreen;
 				gameScreen = NULL;
 				ClearScreenshot();
-				gameScreenImg = new GuiImage(screenwidth, screenheight, (GXColor){175, 200, 215, 255});
-				gameScreenImg->ColorStripe(10);
-				mainWindow->Insert(gameScreenImg, 0);
-				ResumeGui();
-				#ifndef NO_SOUND
-				bgMusic->Play(); // startup music
-				#endif
-				menu = MENU_GAMESELECTION;
+				if(GCSettings.AutoloadGame) {
+					ExitApp();
+				}
+				else {
+					gameScreenImg = new GuiImage(screenwidth, screenheight, (GXColor){175, 200, 215, 255});
+					gameScreenImg->ColorStripe(10);
+					mainWindow->Insert(gameScreenImg, 0);
+					ResumeGui();
+					#ifndef NO_SOUND
+					bgMusic->Play(); // startup music
+					#endif
+					menu = MENU_GAMESELECTION;
+				}
 			}
 		}
 		else if(closeBtn.GetState() == STATE_CLICKED)
