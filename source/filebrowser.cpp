@@ -39,6 +39,7 @@
 #include "snes9x/snes9x.h"
 #include "snes9x/memmap.h"
 #include "snes9x/cheats.h"
+#include <string>
 
 extern "C" {
 extern char* strcasestr(const char *, const char *);
