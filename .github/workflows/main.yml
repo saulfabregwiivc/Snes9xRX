@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         image: ["Wii", "GameCube"]
-    container: raz0red/devkitppc:latest
+    container: endrift/devkitppc:latest
  
     steps:
     - name: Checkout Snes9xRXrepo
