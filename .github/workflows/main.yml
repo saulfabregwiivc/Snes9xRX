@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         image: ["Wii", "GameCube"]
-    container: ricky1213/sdlpal-wii-env:latest
+    container: raz0red/devkitppc:latest
  
     steps:
     - name: Checkout Snes9xRXrepo
