@@ -94,6 +94,25 @@ void ExitCleanup()
 	void (*PSOReload) () = (void (*)()) 0x80001800;
 #endif
 
+void ExitToWiiflow()
+{
+	SavePrefs(SILENT);
+	if (SNESROMSize > 0 && !ConfigRequested && GCSettings.AutoSave == 1)
+		SaveSRAMAuto(SILENT);
+	ExitCleanup();
+
+	if( !!*(u32*)0x80001800 ) 
+	{
+		// Were we launched via HBC? (or via wiiflows stub replacement? :P)
+		exit(1);
+	}
+	else
+	{
+		// Wii channel support
+		SYS_ResetSystem( SYS_RETURNTOMENU, 0, 0 );
+	}
+}
+
 void ExitApp()
 {
 	SavePrefs(SILENT);
@@ -103,63 +122,49 @@ void ExitApp()
 
 	ExitCleanup();
 
-	if(ShutdownRequested){
+	if(ShutdownRequested)
+		SYS_ResetSystem(SYS_POWEROFF_STANDBY, 0, 0);
+
+	#ifdef HW_RVL
+	if(GCSettings.ExitAction == 0) // Auto
+	{
+		char * sig = (char *)0x80001804;
+		if(
+			sig[0] == 'S' &&
+			sig[1] == 'T' &&
+			sig[2] == 'U' &&
+			sig[3] == 'B' &&
+			sig[4] == 'H' &&
+			sig[5] == 'A' &&
+			sig[6] == 'X' &&
+			sig[7] == 'X')
+			GCSettings.ExitAction = 3; // Exit to HBC
+		else
+			GCSettings.ExitAction = 1; // HBC not found
+	}
+	#endif
+
+	if(GCSettings.ExitAction == 1) // Exit to Menu
+	{
+		#ifdef HW_RVL
+			SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+		#else
+			#define SOFTRESET_ADR ((volatile u32*)0xCC003024)
+			*SOFTRESET_ADR = 0x00000000;
+		#endif
+	}
+	else if(GCSettings.ExitAction == 2) // Shutdown Wii
+	{
 		SYS_ResetSystem(SYS_POWEROFF_STANDBY, 0, 0);
 	}
-	else if(GCSettings.AutoloadGame) {
-		if( !!*(u32*)0x80001800 )
-		{
-			// Were we launched via HBC? (or via WiiFlow's stub replacement)
-			exit(1);
-		}
-		else
-		{
-			// Wii channel support
-			SYS_ResetSystem( SYS_RETURNTOMENU, 0, 0 );
-		}
-	}
-	else {
+	else // Exit to Loader
+	{
 		#ifdef HW_RVL
-		if(GCSettings.ExitAction == 0) // Auto
-		{
-			char * sig = (char *)0x80001804;
-			if(
-				sig[0] == 'S' &&
-				sig[1] == 'T' &&
-				sig[2] == 'U' &&
-				sig[3] == 'B' &&
-				sig[4] == 'H' &&
-				sig[5] == 'A' &&
-				sig[6] == 'X' &&
-				sig[7] == 'X')
-				GCSettings.ExitAction = 3; // Exit to HBC
-			else
-				GCSettings.ExitAction = 1; // HBC not found
-		}
+			exit(0);
+		#else
+			if (psoid[0] == PSOSDLOADID)
+				PSOReload();
 		#endif
-
-		if(GCSettings.ExitAction == 1) // Exit to Menu
-		{
-			#ifdef HW_RVL
-				SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
-			#else
-				#define SOFTRESET_ADR ((volatile u32*)0xCC003024)
-				*SOFTRESET_ADR = 0x00000000;
-			#endif
-		}
-		else if(GCSettings.ExitAction == 2) // Shutdown Wii
-		{
-			SYS_ResetSystem(SYS_POWEROFF_STANDBY, 0, 0);
-		}
-		else // Exit to Loader
-		{
-			#ifdef HW_RVL
-				exit(0);
-			#else
-				if (psoid[0] == PSOSDLOADID)
-					PSOReload();
-			#endif
-		}
 	}
 }
 
@@ -168,7 +173,7 @@ void ShutdownCB()
 {
 	ShutdownRequested = 1;
 }
-void ResetCB(u32 irq, void *ctx)
+void ResetCB()
 {
 	ResetRequested = 1;
 }
@@ -303,7 +308,7 @@ bool SaneIOS(u32 ios)
 static bool gecko = false;
 static mutex_t gecko_mutex = 0;
 
-static ssize_t __out_write(struct _reent *r, void* fd, const char *ptr, size_t len)
+static ssize_t __out_write(struct _reent *r, int fd, const char *ptr, size_t len)
 {
 	if (!gecko || len == 0)
 		return len;
@@ -456,10 +461,10 @@ int main(int argc, char *argv[])
 	InitGUIThreads();
 
 	bool autoboot = false;
-	if(argc > 2 && argv[1] != NULL && argv[2] != NULL) {
-	//{
-		//autoboot = true;
-		//ResetBrowser();
+	if(argc > 2 && argv[1] != NULL && argv[2] != NULL)
+	{
+		autoboot = true;
+		ResetBrowser();
 		LoadPrefs();
 		if(strcasestr(argv[1], "sd:/") != NULL)
 		{
@@ -472,9 +477,45 @@ int main(int argc, char *argv[])
 			GCSettings.LoadMethod = DEVICE_USB;
 		}
 		SavePrefs(SILENT);
-		
-		GCSettings.AutoloadGame = AutoloadGame(argv[1], argv[2]);
-		autoboot = GCSettings.AutoloadGame;
+		selectLoadedFile = 1;
+		std::string dir(argv[1]);
+		dir.assign(&dir[dir.find_last_of(":") + 2]);
+		char arg_filename[1024];
+		strncpy(arg_filename, argv[2], sizeof(arg_filename));
+		strncpy(GCSettings.LoadFolder, dir.c_str(), sizeof(GCSettings.LoadFolder));
+		OpenGameList();
+		strncpy(GCSettings.Exit_Dol_File, argc > 3 && argv[3] != NULL ? argv[3] : "", sizeof(GCSettings.Exit_Dol_File));
+		if(argc > 5 && argv[4] != NULL && argv[5] != NULL)
+		{
+			sscanf(argv[4], "%08x", &GCSettings.Exit_Channel[0]);
+			sscanf(argv[5], "%08x", &GCSettings.Exit_Channel[1]);
+		}
+		else
+		{
+			GCSettings.Exit_Channel[0] = 0x00010008;
+			GCSettings.Exit_Channel[1] = 0x57494948;
+		}
+		if(argc > 6 && argv[6] != NULL)
+			strncpy(GCSettings.LoaderName, argv[6], sizeof(GCSettings.LoaderName));
+		else
+			snprintf(GCSettings.LoaderName, sizeof(GCSettings.LoaderName), "WiiFlow");
+		for(int i = 0; i < browser.numEntries; i++)
+		{
+			// Skip it
+			if (strcmp(browserList[i].filename, ".") == 0 || strcmp(browserList[i].filename, "..") == 0)
+				continue;
+			if(strcasestr(browserList[i].filename, arg_filename) != NULL)
+			{
+				browser.selIndex = i;
+				if(IsSz())
+				{
+					BrowserLoadSz();
+					browser.selIndex = 1;
+				}
+				break;
+			}
+		}
+		BrowserLoadFile();
 	}
 
 	switch (GCSettings.sfxOverclock)
@@ -500,23 +541,30 @@ int main(int argc, char *argv[])
 
 	while (1) // main loop
 	{
-		if(!autoboot) {
-			// go back to checking if devices were inserted/removed
-			// since we're entering the menu
-			ResumeDeviceThread();
+		// go back to checking if devices were inserted/removed
+		// since we're entering the menu
+		ResumeDeviceThread();
 
-			SwitchAudioMode(1);
+		SwitchAudioMode(1);
 
+		if(!autoboot)
+		{
 			if(SNESROMSize == 0)
 				MainMenu(MENU_GAMESELECTION);
 			else
 				MainMenu(MENU_GAME);
+
+			ConfigRequested = 0;
+			ScreenshotRequested = 0;
 		}
+		else if(SNESROMSize != 0 && autoboot)
+			autoboot = false;
+		else
+			ExitApp();
 
 #ifdef HW_RVL
 		SelectFilterMethod();
 #endif
-		autoboot = false;	
 		ConfigRequested = 0;
 		ScreenshotRequested = 0;
 		SwitchAudioMode(0);
