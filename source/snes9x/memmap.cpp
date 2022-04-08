@@ -890,8 +890,10 @@ static void S9xDeinterleaveGD24 (int size, uint8 *base)
 
 bool8 CMemory::Init (void)
 {
+	// TODO: If these change size, check other locations in the code that also
+	// have the fixed size. In the future, make this a static allocation.
     RAM	 = (uint8 *) memalign(32,0x20000);
-    SRAM = (uint8 *) memalign(32,0x20000);
+    SRAM = (uint8 *) memalign(32,0x80000);
     VRAM = (uint8 *) memalign(32,0x10000);
 #ifdef USE_VM
 	ROM  = (uint8 *) vm_malloc(MAX_ROM_SIZE + 0x200 + 0x8000);
@@ -936,7 +938,7 @@ bool8 CMemory::Init (void)
     }
 
 	ZeroMemory(RAM,  0x20000);
-	ZeroMemory(SRAM, 0x20000);
+	ZeroMemory(SRAM, 0x80000);
 	ZeroMemory(VRAM, 0x10000);
 	ZeroMemory(ROM,  MAX_ROM_SIZE + 0x200 + 0x8000);
 
@@ -1798,7 +1800,8 @@ void CMemory::ClearSRAM (bool8 onlyNonSavedSRAM)
 		if (!(Settings.SuperFX && ROMType < 0x15) && !(Settings.SA1 && ROMType == 0x34)) // can have SRAM
 			return;
 
-	memset(SRAM, SNESGameFixes.SRAMInitialValue, 0x20000);
+	// TODO: If SRAM size changes change this value as well
+	memset(SRAM, SNESGameFixes.SRAMInitialValue, (32,0x80000));
 }
 
 bool8 CMemory::LoadSRAM (const char *filename)
@@ -1833,15 +1836,17 @@ bool8 CMemory::LoadSRAM (const char *filename)
 	}
 
 	size = SRAMSize ? (1 << (SRAMSize + 3)) * 128 : 0;
-	if (size > 0x20000)
-		size = 0x20000;
+	if (LoROM)
+		size = size < 0x70000 ? size : 0x70000;
+	else if (HiROM)
+		size = size < 0x40000 ? size : 0x40000;
 
 	if (size)
 	{
 		file = fopen(sramName, "rb");
 		if (file)
 		{
-			len = fread((char *) SRAM, 1, 0x20000, file);
+			len = fread((char *) SRAM, 1, size, file);
 			fclose(file);
 			if (len - size == 512)
 				memmove(SRAM, SRAM + 512, size);
@@ -1865,7 +1870,7 @@ bool8 CMemory::LoadSRAM (const char *filename)
 			file = fopen(path, "rb");
 			if (file)
 			{
-				len = fread((char *) SRAM, 1, 0x20000, file);
+				len = fread((char *) SRAM, 1, size, file);
 				fclose(file);
 				if (len - size == 512)
 					memmove(SRAM, SRAM + 512, size);
@@ -1913,32 +1918,28 @@ bool8 CMemory::SaveSRAM (const char *filename)
 		file = fopen(name, "wb");
 		if (file)
 		{
-			size_t	ignore;
-			ignore = fwrite((char *) Multi.sramB, size, 1, file);
+			if (!fwrite((char *) Multi.sramB, size, 1, file))
+				printf ("Couldn't write to subcart SRAM file.\n");
 			fclose(file);
-		#ifdef __linux
-			ignore = chown(name, getuid(), getgid());
-		#endif
 		}
 
 		strcpy(ROMFilename, temp);
     }
 
     size = SRAMSize ? (1 << (SRAMSize + 3)) * 128 : 0;
-	if (size > 0x20000)
-		size = 0x20000;
+	if (LoROM)
+		size = size < 0x70000 ? size : 0x70000;
+	else if (HiROM)
+		size = size < 0x40000 ? size : 0x40000;
 
 	if (size)
 	{
 		file = fopen(sramName, "wb");
 		if (file)
 		{
-			size_t	ignore;
-			ignore = fwrite((char *) SRAM, size, 1, file);
+			if (!fwrite((char *) SRAM, size, 1, file))
+				printf ("Couldn't write to SRAM file.\n");
 			fclose(file);
-		#ifdef __linux
-			ignore = chown(sramName, getuid(), getgid());
-		#endif
 
 			if (Settings.SRTC || Settings.SPC7110RTC)
 				SaveSRTC();
@@ -2230,6 +2231,11 @@ void CMemory::InitROM (void)
 		case 0x1420:
 		case 0x1520:
 		case 0x1A20:
+		// SuperFX FastROM for ROM hacks
+		case 0x1330:
+		case 0x1430:
+		case 0x1530:
+		case 0x1A30:
 			Settings.SuperFX = TRUE;
 			S9xInitSuperFX();
 			if (ROM[0x7FDA] == 0x33)
@@ -2383,7 +2389,7 @@ void CMemory::InitROM (void)
 	if (Settings.ForcePAL)
 		Settings.PAL = TRUE;
 	else
-	if (!Settings.BS && (ROMRegion >= 2) && (ROMRegion <= 12))
+	if (!Settings.BS && (((ROMRegion >= 2) && (ROMRegion <= 12)) || ROMRegion == 18)) // 18 is used by "Tintin in Tibet (Europe) (En,Es,Sv)"
 		Settings.PAL = TRUE;
 	else
 		Settings.PAL = FALSE;
@@ -3367,7 +3373,9 @@ void CMemory::ApplyROMFixes (void)
 	if (!Settings.DisableGameSpecificHacks)
 	{
 		if (match_id("AVCJ"))                                      // Rendering Ranger R2
-			Timings.APUSpeedup = 2;
+			Timings.APUSpeedup = 4;
+		if (match_na("TARGA"))                                     // TARGA (Prototype)
+			Timings.APUSpeedup = 4;
 		if (match_id("AANJ"))                                      // Chou Aniki
 			Timings.APUSpeedup = -3;
 		if (match_na("CIRCUIT USA"))

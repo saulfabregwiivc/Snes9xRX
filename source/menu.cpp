@@ -73,6 +73,9 @@ static GuiTrigger * trigA = NULL;
 static GuiTrigger * trig2 = NULL;
 
 static GuiButton * btnLogo = NULL;
+#ifdef HW_RVL
+static GuiButton * batteryBtn[4];
+#endif
 static GuiImageData * gameScreen = NULL;
 static GuiImage * gameScreenImg = NULL;
 static GuiImage * bgTopImg = NULL;
@@ -816,7 +819,7 @@ static void WindowCredits(void * ptr)
 	creditsBoxImg.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	creditsWindowBox.Append(&creditsBoxImg);
 
-	int numEntries = 23;
+	int numEntries = 24;
 	GuiText * txt[numEntries];
 
 	txt[i] = new GuiText("Credits", 28, (GXColor){0, 0, 0, 255});
@@ -825,8 +828,7 @@ static void WindowCredits(void * ptr)
 	txt[i] = new GuiText("Official Site: https://github.com/niuus/Snes9xRX/", 18, (GXColor){0, 0, 0, 255});
 	txt[i]->SetAlignment(ALIGN_CENTRE, ALIGN_TOP); txt[i]->SetPosition(0,y); i++; y+=40;
 
-	txt[i]->SetPresets(18, (GXColor){0, 0, 0, 255}, 0,
-			FTGX_JUSTIFY_LEFT | FTGX_ALIGN_TOP, ALIGN_LEFT, ALIGN_TOP);
+	GuiText::SetPresets(18, (GXColor){0, 0, 0, 255}, 0, FTGX_JUSTIFY_LEFT | FTGX_ALIGN_TOP, ALIGN_LEFT, ALIGN_TOP);
 	txt[i] = new GuiText("Coding & menu design");
 	txt[i]->SetPosition(50,y); i++;
 	txt[i] = new GuiText("Tantric");
@@ -862,29 +864,41 @@ static void WindowCredits(void * ptr)
 	txt[i] = new GuiText("FreeTypeGX");
 	txt[i]->SetPosition(50,y); i++;
 	txt[i] = new GuiText("Armin Tamzarian");
-	txt[i]->SetPosition(330,y); i++; y+=48;
+	txt[i]->SetPosition(330,y); i++;
 
-	txt[i]->SetPresets(16, (GXColor){0, 0, 0, 255}, 0,
-	FTGX_JUSTIFY_CENTER | FTGX_ALIGN_TOP, ALIGN_CENTRE, ALIGN_TOP);
-
-	txt[i] = new GuiText("Snes9x - Copyright (c) Snes9x Team 1996 - 2020");
-	txt[i]->SetPosition(0,y); i++; y+=20;
-	txt[i] = new GuiText("This software is open source and may be copied, distributed, or modified");
-	txt[i]->SetPosition(0,y); i++; y+=20;
-	txt[i] = new GuiText("under the terms of the GNU General Public License (GPL) Version 2.");
-	txt[i]->SetPosition(0,y); i++; y+=20;
-
-	//char iosVersion[20];
-	char iosVersion[90]; // added 70 for USB info
+	char wiiDetails[30];
+	char wiiInfo[20];
+	char controllerInfo[100];
 
 #ifdef HW_RVL
-	//sprintf(iosVersion, "IOS: %ld", IOS_GetVersion());
-	snprintf(iosVersion, 90, "IOS: %ld / %s", IOS_GetVersion(), GetUSBControllerInfo());
+	if(!IsWiiU()) {
+		sprintf(wiiInfo, "Wii");
+	}
+	else if(IsWiiUFastCPU()) {
+		sprintf(wiiInfo, "vWii (1.215 GHz)");
+	}
+	else {
+		sprintf(wiiInfo, "vWii (729 MHz)");
+	}
+	sprintf(wiiDetails, "IOS: %d / %s", IOS_GetVersion(), wiiInfo);
+	sprintf(controllerInfo, GetUSBControllerInfo());
 #endif
 
-	txt[i] = new GuiText(iosVersion, 15, (GXColor){0, 0, 0, 255});
+	txt[i] = new GuiText(controllerInfo, 14, (GXColor){0, 0, 0, 255});
 	txt[i]->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
-	txt[i]->SetPosition(25,-5);
+	txt[i]->SetPosition(20,-60); i++;
+	txt[i] = new GuiText(wiiDetails, 14, (GXColor){0, 0, 0, 255});
+	txt[i]->SetAlignment(ALIGN_RIGHT, ALIGN_BOTTOM);
+	txt[i]->SetPosition(-20,-60); i++;
+
+	GuiText::SetPresets(12, (GXColor){0, 0, 0, 255}, 0, FTGX_JUSTIFY_CENTER | FTGX_ALIGN_TOP, ALIGN_CENTRE, ALIGN_BOTTOM);
+
+	txt[i] = new GuiText("Snes9x - Copyright (c) Snes9x Team 1996 - 2021");
+	txt[i]->SetPosition(0,-44); i++;
+	txt[i] = new GuiText("This software is open source and may be copied, distributed, or modified");
+	txt[i]->SetPosition(0,-32); i++;
+	txt[i] = new GuiText("under the terms of the GNU General Public License (GPL) Version 2.");
+	txt[i]->SetPosition(0,-20);
 
 	for(i=0; i < numEntries; i++)
 		creditsWindowBox.Append(txt[i]);
@@ -940,6 +954,16 @@ static void WindowCredits(void * ptr)
  * Displays a list of games on the specified load device, and allows the user
  * to browse and select from this list.
  ***************************************************************************/
+static char* getImageFolder()
+{
+	switch(GCSettings.PreviewImage)
+	{
+		case 1 : return GCSettings.CoverFolder; break;
+		case 2 : return GCSettings.ArtworkFolder; break;
+		default: return GCSettings.ScreenshotsFolder; break;
+	}
+}
+
 static int MenuGameSelection()
 {
 	int menu = MENU_NONE;
@@ -1021,7 +1045,7 @@ static int MenuGameSelection()
 	GuiImage preview;
 	preview.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	preview.SetPosition(174, -8);
-	u8* imgBuffer = MEM_ALLOC(512 * 512 * 4);
+	u8* imgBuffer = MEM_ALLOC(640 * 480 * 4);
 	int  previousBrowserIndex = -1;
 	char imagePath[MAXJOLIET + 1];
 
@@ -1102,27 +1126,18 @@ static int MenuGameSelection()
 		{
 			previousBrowserIndex = browser.selIndex;
 			previousPreviewImg = GCSettings.PreviewImage;
-			snprintf(imagePath, MAXJOLIET, "%s%s/%s.png", pathPrefix[GCSettings.LoadMethod], ImageFolder(), browserList[browser.selIndex].displayname);
-			
-			AllocSaveBuffer();
+			snprintf(imagePath, MAXJOLIET, "%s%s/%s.png", pathPrefix[GCSettings.LoadMethod], getImageFolder(), browserList[browser.selIndex].displayname);
+
 			int width, height;
-			if(LoadFile(imagePath, SILENT))
+			if(DecodePNGFromFile(imagePath, &width, &height, imgBuffer, 640, 480))
 			{
-				if(DecodePNG(savebuffer, &width, &height, imgBuffer, 512, 512))
-				{
-					preview.SetImage(imgBuffer, width, height);
-					preview.SetScale( MIN(225.0f / width, 235.0f / height) );
-				}
-				else
-				{
-					preview.SetImage(NULL, 0, 0);
-				}
+				preview.SetImage(imgBuffer, width, height);
+				preview.SetScale( MIN(225.0f / width, 235.0f / height) );
 			}
-			else 
+			else
 			{
 				preview.SetImage(NULL, 0, 0);
 			}
-			FreeSaveBuffer();
 		}
 
 		if(settingsBtn.GetState() == STATE_CLICKED)
@@ -1236,6 +1251,95 @@ static void ControllerWindow()
 	delete(w);
 	delete(settingText);
 }
+
+#ifdef HW_RVL
+static int playerMappingChan = 0;
+
+static void PlayerMappingWindowUpdate(void * ptr, int dir)
+{
+	GuiButton * b = (GuiButton *)ptr;
+	if(b->GetState() == STATE_CLICKED)
+	{
+		playerMapping[playerMappingChan] += dir;
+
+		if(playerMapping[playerMappingChan] > 3)
+			playerMapping[playerMappingChan] = 0;
+		if(playerMapping[playerMappingChan] < 0)
+			playerMapping[playerMappingChan] = 3;
+
+		char playerNumber[20];
+		sprintf(playerNumber, "Player %d", playerMapping[playerMappingChan]+1);
+
+		settingText->SetText(playerNumber);
+		b->ResetState();
+	}
+}
+
+static void PlayerMappingWindowLeftClick(void * ptr) { PlayerMappingWindowUpdate(ptr, -1); }
+static void PlayerMappingWindowRightClick(void * ptr) { PlayerMappingWindowUpdate(ptr, +1); }
+
+static void PlayerMappingWindow(int chan)
+{
+	playerMappingChan = chan;
+
+	GuiWindow * w = new GuiWindow(300,250);
+	w->SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+
+	GuiTrigger trigLeft;
+	trigLeft.SetButtonOnlyInFocusTrigger(-1, WPAD_BUTTON_LEFT | WPAD_CLASSIC_BUTTON_LEFT, PAD_BUTTON_LEFT, WIIDRC_BUTTON_LEFT);
+
+	GuiTrigger trigRight;
+	trigRight.SetButtonOnlyInFocusTrigger(-1, WPAD_BUTTON_RIGHT | WPAD_CLASSIC_BUTTON_RIGHT, PAD_BUTTON_RIGHT, WIIDRC_BUTTON_RIGHT);
+
+	GuiImageData arrowLeft(button_arrow_left_png);
+	GuiImage arrowLeftImg(&arrowLeft);
+	GuiImageData arrowLeftOver(button_arrow_left_over_png);
+	GuiImage arrowLeftOverImg(&arrowLeftOver);
+	GuiButton arrowLeftBtn(arrowLeft.GetWidth(), arrowLeft.GetHeight());
+	arrowLeftBtn.SetImage(&arrowLeftImg);
+	arrowLeftBtn.SetImageOver(&arrowLeftOverImg);
+	arrowLeftBtn.SetAlignment(ALIGN_LEFT, ALIGN_MIDDLE);
+	arrowLeftBtn.SetTrigger(trigA);
+	arrowLeftBtn.SetTrigger(trig2);
+	arrowLeftBtn.SetTrigger(&trigLeft);
+	arrowLeftBtn.SetSelectable(false);
+	arrowLeftBtn.SetUpdateCallback(PlayerMappingWindowLeftClick);
+
+	GuiImageData arrowRight(button_arrow_right_png);
+	GuiImage arrowRightImg(&arrowRight);
+	GuiImageData arrowRightOver(button_arrow_right_over_png);
+	GuiImage arrowRightOverImg(&arrowRightOver);
+	GuiButton arrowRightBtn(arrowRight.GetWidth(), arrowRight.GetHeight());
+	arrowRightBtn.SetImage(&arrowRightImg);
+	arrowRightBtn.SetImageOver(&arrowRightOverImg);
+	arrowRightBtn.SetAlignment(ALIGN_RIGHT, ALIGN_MIDDLE);
+	arrowRightBtn.SetTrigger(trigA);
+	arrowRightBtn.SetTrigger(trig2);
+	arrowRightBtn.SetTrigger(&trigRight);
+	arrowRightBtn.SetSelectable(false);
+	arrowRightBtn.SetUpdateCallback(PlayerMappingWindowRightClick);
+
+	char playerNumber[20];
+	sprintf(playerNumber, "Player %d", playerMapping[playerMappingChan]+1);
+
+	settingText = new GuiText(playerNumber, 22, (GXColor){0, 0, 0, 255});
+
+	w->Append(&arrowLeftBtn);
+	w->Append(&arrowRightBtn);
+	w->Append(settingText);
+
+	char title[50];
+	sprintf(title, "Player Mapping - Controller %d", chan+1);
+
+	int previousPlayerMapping = playerMapping[playerMappingChan];
+
+	if(!SettingWindow(title,w))
+		playerMapping[playerMappingChan] = previousPlayerMapping; // undo changes
+
+	delete(w);
+	delete(settingText);
+}
+#endif
 
 /****************************************************************************
  * MenuGame
@@ -1379,6 +1483,9 @@ static int MenuGame()
 	gameSettingsBtn.SetEffectGrow();
 
 	GuiText mainmenuBtnTxt("Main Menu", 22, (GXColor){0, 0, 0, 255});
+	if(GCSettings.AutoloadGame) {
+		mainmenuBtnTxt.SetText("Exit");
+	}
 	GuiImage mainmenuBtnImg(&btnOutline);
 	GuiImage mainmenuBtnImgOver(&btnOutlineOver);
 	GuiButton mainmenuBtn(btnOutline.GetWidth(), btnOutline.GetHeight());
@@ -1419,7 +1526,6 @@ static int MenuGame()
 	GuiText * batteryTxt[4];
 	GuiImage * batteryImg[4];
 	GuiImage * batteryBarImg[4];
-	GuiButton * batteryBtn[4];
 
 	for(i=0; i < 4; i++)
 	{
@@ -1440,7 +1546,11 @@ static int MenuGame()
 		batteryBtn[i]->SetImage(batteryImg[i]);
 		batteryBtn[i]->SetIcon(batteryBarImg[i]);
 		batteryBtn[i]->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+		batteryBtn[i]->SetTrigger(trigA);
+		batteryBtn[i]->SetSoundOver(&btnSoundOver);
+		batteryBtn[i]->SetSoundClick(&btnSoundClick);
 		batteryBtn[i]->SetSelectable(false);
+		batteryBtn[i]->SetState(STATE_DISABLED);
 		batteryBtn[i]->SetAlpha(150);
 	}
 
@@ -1528,6 +1638,7 @@ static int MenuGame()
 				if(newStatus == true) // controller connected
 				{
 					batteryBtn[i]->SetAlpha(255);
+					batteryBtn[i]->SetState(STATE_DEFAULT);
 					batteryBarImg[i]->SetTile(newLevel);
 
 					if(newLevel == 0)
@@ -1538,6 +1649,7 @@ static int MenuGame()
 				else // controller not connected
 				{
 					batteryBtn[i]->SetAlpha(150);
+					batteryBtn[i]->SetState(STATE_DISABLED);
 					batteryBarImg[i]->SetTile(0);
 					batteryImg[i]->SetImage(&battery);
 				}
@@ -1571,6 +1683,24 @@ static int MenuGame()
 		{
 			menu = MENU_GAMESETTINGS;
 		}
+#ifdef HW_RVL
+		else if(batteryBtn[0]->GetState() == STATE_CLICKED)
+		{
+			PlayerMappingWindow(0);
+		}
+		else if(batteryBtn[1]->GetState() == STATE_CLICKED)
+		{
+			PlayerMappingWindow(1);
+		}
+		else if(batteryBtn[2]->GetState() == STATE_CLICKED)
+		{
+			PlayerMappingWindow(2);
+		}
+		else if(batteryBtn[3]->GetState() == STATE_CLICKED)
+		{
+			PlayerMappingWindow(3);
+		}
+#endif
 		else if(mainmenuBtn.GetState() == STATE_CLICKED)
 		{
 			if (WindowPrompt("Quit Game", "Quit this game? Any unsaved progress will be lost.", "OK", "Cancel"))
@@ -1581,14 +1711,19 @@ static int MenuGame()
 				delete gameScreen;
 				gameScreen = NULL;
 				ClearScreenshot();
-				gameScreenImg = new GuiImage(screenwidth, screenheight, (GXColor){175, 200, 215, 255});
-				gameScreenImg->ColorStripe(10);
-				mainWindow->Insert(gameScreenImg, 0);
-				ResumeGui();
-				#ifndef NO_SOUND
-				bgMusic->Play(); // startup music
-				#endif
-				menu = MENU_GAMESELECTION;
+				if(GCSettings.AutoloadGame) {
+					ExitApp();
+				}
+				else {
+					gameScreenImg = new GuiImage(screenwidth, screenheight, (GXColor){175, 200, 215, 255});
+					gameScreenImg->ColorStripe(10);
+					mainWindow->Insert(gameScreenImg, 0);
+					ResumeGui();
+					#ifndef NO_SOUND
+					bgMusic->Play(); // startup music
+					#endif
+					menu = MENU_GAMESELECTION;
+				}
 			}
 		}
 		else if(closeBtn.GetState() == STATE_CLICKED)
@@ -2211,7 +2346,7 @@ static int MenuGameCheats()
 
 	for(i=0; i < Cheat.num_cheats; i++)
 	{
-		sprintf (options.name[i], "%s", Cheat.c[i].name);
+		snprintf (options.name[i], 50, "%s", Cheat.c[i].name);
 		sprintf (options.value[i], "%s", Cheat.c[i].enabled == true ? "On" : "Off");
 	}
 
@@ -3137,8 +3272,13 @@ static void ScreenPositionWindowUpdate(void * ptr, int x, int y)
 		GCSettings.xshift += x;
 		GCSettings.yshift += y;
 
+		if(!(GCSettings.xshift > -50 && GCSettings.xshift < 50))
+			GCSettings.xshift = 0;
+		if(!(GCSettings.yshift > -50 && GCSettings.yshift < 50))
+			GCSettings.yshift = 0;
+
 		char shift[10];
-		sprintf(shift, "%i, %i", GCSettings.xshift, GCSettings.yshift);
+		sprintf(shift, "%hd, %hd", GCSettings.xshift, GCSettings.yshift);
 		settingText->SetText(shift);
 		b->ResetState();
 	}

@@ -15,7 +15,7 @@
 #include <gccore.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <string>
 #include <wiiuse/wpad.h>
 #include <sys/dir.h>
 #include <malloc.h>
@@ -39,6 +39,10 @@
 #include "snes9x/snes9x.h"
 #include "snes9x/memmap.h"
 #include "snes9x/cheats.h"
+
+extern "C" {
+extern char* strcasestr(const char *, const char *);
+}
 
 BROWSERINFO browser;
 BROWSERENTRY * browserList = NULL; // list of files/folders in browser
@@ -73,8 +77,6 @@ int autoLoadMethod()
 		device = DEVICE_DVD;
 	else if(ChangeInterface(DEVICE_SMB, SILENT))
 		device = DEVICE_SMB;
-	else
-		ErrorPrompt("Unable to locate a load device!");
 
 	if(GCSettings.LoadMethod == DEVICE_AUTO)
 		GCSettings.LoadMethod = device; // save device found for later use
@@ -373,7 +375,8 @@ static bool IsValidROM()
 				if (stricmp(p, ".smc") == 0 ||
 					stricmp(p, ".fig") == 0 ||
 					stricmp(p, ".sfc") == 0 ||
-					stricmp(p, ".swc") == 0)
+					stricmp(p, ".swc") == 0 ||
+					stricmp(p, ".bs") == 0)
 				{
 					if(zippedFilename) free(zippedFilename);
 					return true;
@@ -646,16 +649,61 @@ int
 OpenGameList ()
 {
 	int device = GCSettings.LoadMethod;
+	bool autoLoad = false;
 
-	if(device == DEVICE_AUTO && strlen(GCSettings.LoadFolder) > 0)
+	if(device == DEVICE_AUTO && strlen(GCSettings.LoadFolder) > 0) {
 		device = autoLoadMethod();
+		autoLoad = true;
+	}
 
 	// change current dir to roms directory
-	if(device > 0)
+	if(device > 0) {
 		sprintf(browser.dir, "%s%s/", pathPrefix[device], GCSettings.LoadFolder);
-	else
+
+		if(autoLoad) {
+			DIR *dir = opendir(browser.dir);
+
+			if(dir == NULL) {
+				sprintf(browser.dir, "%s", pathPrefix[device]);
+			}
+			else {
+				closedir(dir);
+			}
+		}
+	}
+	else {
 		browser.dir[0] = 0;
-	
+	}
+
 	BrowserChangeFolder();
 	return browser.numEntries;
+}
+
+bool AutoloadGame(char* filepath, char* filename) {
+	ResetBrowser();
+
+	selectLoadedFile = 1;
+	std::string dir(filepath);
+	dir.assign(&dir[dir.find_last_of(":") + 2]);
+	strncpy(GCSettings.LoadFolder, dir.c_str(), sizeof(GCSettings.LoadFolder));
+	OpenGameList();
+
+	for(int i = 0; i < browser.numEntries; i++) {
+		// Skip it
+		if (strcmp(browserList[i].filename, ".") == 0 || strcmp(browserList[i].filename, "..") == 0) {
+			continue;
+		}
+		if(strcasestr(browserList[i].filename, filename) != NULL) {
+			browser.selIndex = i;
+			if(IsSz()) {
+				BrowserLoadSz();
+				browser.selIndex = 1;
+			}
+			break;
+		}
+	}
+	if(BrowserLoadFile() > 0) {
+		return true;
+	}
+	return false;
 }

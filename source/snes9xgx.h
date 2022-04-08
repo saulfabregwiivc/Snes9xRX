@@ -20,7 +20,7 @@
 #include "filelist.h"
 
 #define APPNAME 			"Snes9x RX"
-#define APPVERSION 			"4.9.0"
+#define APPVERSION 			"5.0.0"
 #define APPFOLDER 			"snes9xgx"
 #define PREF_FILE_NAME		"settingsRX.xml"
 
@@ -94,10 +94,8 @@ struct SGCSettings{
 	char	CoverFolder[MAXPATHLEN]; 	// Path to cover files
 	char	ArtworkFolder[MAXPATHLEN]; 	// Path to artwork files
 	char 	ImageFolder[MAXPATHLEN]; 	// Saved image folder path 
-	
-	char	Exit_Dol_File[MAXPATHLEN]; // Exit Path
-	char	LoaderName[20]; // Menu Loader Name
-	u32		Exit_Channel[2]; // Exit Channel
+
+	int		AutoloadGame;
 
 	char	smbip[80];
 	char	smbuser[20];
@@ -127,8 +125,6 @@ struct SGCSettings{
 	int		Interpolation;
 };
 
-char* ImageFolder();
-
 void ExitApp();
 void ShutdownWii();
 bool SupportedIOS(u32 ios);
@@ -141,4 +137,13 @@ extern int ExitRequested;
 extern char appPath[];
 extern FreeTypeGX *fontSystem[];
 
+extern bool isWiiVC;
+static inline bool IsWiiU(void)
+{
+	return ((*(vu16*)0xCD8005A0 == 0xCAFE) || isWiiVC);
+}
+static inline bool IsWiiUFastCPU(void)
+{
+	return ((*(vu16*)0xCD8005A0 == 0xCAFE) && ((*(vu32*)0xCD8005B0 & 0x20) == 0));
+}
 #endif

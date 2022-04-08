@@ -38,6 +38,8 @@
 #ifdef HW_RVL
 #include "utils/retrode.h"
 #include "utils/xbox360.h"
+#include "utils/hornet.h"
+#include "utils/mayflash.h"
 extern "C"{
 #include "utils/sicksaxis.h"
 }
@@ -48,6 +50,7 @@ extern "C"{
 
 #define ANALOG_SENSITIVITY 30
 
+int playerMapping[4] = {0,1,2,3};
 GuiTrigger userInput[4];
 
 // hold superscope/mouse/justifier cursor positions
@@ -338,6 +341,8 @@ UpdatePads()
 	WiiDRC_ScanPads();
 	Retrode_ScanPads();
 	XBOX360_ScanPads();
+	Hornet_ScanPads();
+	Mayflash_ScanPads();
 	WPAD_ScanPads();
 	#endif
 
@@ -503,7 +508,7 @@ static void UpdateCursorPosition (int chan, int &pos_x, int &pos_y)
  * Reads the changes (buttons pressed, etc) from a controller and reports
  * these changes to Snes9x
  ***************************************************************************/
-static void decodepad (int chan)
+static void decodepad (int chan, int emuChan)
 {
 	int i, offset;
 
@@ -527,6 +532,8 @@ static void decodepad (int chan)
 
 	jp |= Retrode_ButtonsHeld(chan);
 	jp |= XBOX360_ButtonsHeld(chan);
+	jp |= Hornet_ButtonsHeld(chan);
+	jp |= Mayflash_ButtonsHeld(chan);
 #endif
 
 #ifdef HW_RVL
@@ -606,7 +613,7 @@ static void decodepad (int chan)
 #endif
 
 	/*** Fix offset to pad ***/
-	offset = ((chan + 1) << 4);
+	offset = ((emuChan + 1) << 4);
 
 	/*** Report pressed buttons (gamepads) ***/
 	for (i = 0; i < MAXJP; i++)
@@ -626,7 +633,7 @@ static void decodepad (int chan)
     }
 
 	/*** Superscope ***/
-	if (Settings.SuperScopeMaster && chan == 0) // report only once
+	if (Settings.SuperScopeMaster && emuChan == 0) // report only once
 	{
 		// buttons
 		offset = 0x50;
@@ -662,14 +669,14 @@ static void decodepad (int chan)
 		}
 		// pointer
 		offset = 0x80;
-		UpdateCursorPosition(chan, cursor_x[0], cursor_y[0]);
+		UpdateCursorPosition(emuChan, cursor_x[0], cursor_y[0]);
 		S9xReportPointer(offset, (u16) cursor_x[0], (u16) cursor_y[0]);
 	}
 	/*** Mouse ***/
-	else if (Settings.MouseMaster && chan == 0)
+	else if (Settings.MouseMaster && emuChan == 0)
 	{
 		// buttons
-		offset = 0x60 + (2 * chan);
+		offset = 0x60 + (2 * emuChan);
 		for (i = 0; i < 2; i++)
 		{
 			if (jp & btnmap[CTRL_MOUSE][CTRLR_GCPAD][i]
@@ -686,15 +693,15 @@ static void decodepad (int chan)
 		}
 		// pointer
 		offset = 0x81;
-		UpdateCursorPosition(chan, cursor_x[1 + chan], cursor_y[1 + chan]);
-		S9xReportPointer(offset + chan, (u16) cursor_x[1 + chan],
-				(u16) cursor_y[1 + chan]);
+		UpdateCursorPosition(emuChan, cursor_x[1 + emuChan], cursor_y[1 + emuChan]);
+		S9xReportPointer(offset + emuChan, (u16) cursor_x[1 + emuChan],
+				(u16) cursor_y[1 + emuChan]);
 	}
 	/*** Justifier ***/
-	else if (Settings.JustifierMaster && chan < 2)
+	else if (Settings.JustifierMaster && emuChan < 2)
 	{
 		// buttons
-		offset = 0x70 + (3 * chan);
+		offset = 0x70 + (3 * emuChan);
 		for (i = 0; i < 3; i++)
 		{
 			if (jp & btnmap[CTRL_JUST][CTRLR_GCPAD][i]
@@ -711,9 +718,9 @@ static void decodepad (int chan)
 		}
 		// pointer
 		offset = 0x83;
-		UpdateCursorPosition(chan, cursor_x[3 + chan], cursor_y[3 + chan]);
-		S9xReportPointer(offset + chan, (u16) cursor_x[3 + chan],
-				(u16) cursor_y[3 + chan]);
+		UpdateCursorPosition(emuChan, cursor_x[3 + emuChan], cursor_y[3 + emuChan]);
+		S9xReportPointer(offset + emuChan, (u16) cursor_x[3 + emuChan],
+				(u16) cursor_y[3 + emuChan]);
 	}
 
 #ifdef HW_RVL
@@ -739,7 +746,11 @@ bool MenuRequested()
 			#ifdef HW_RVL
 			|| (userInput[i].wpad->btns_h & WPAD_BUTTON_HOME) ||
 			(userInput[i].wpad->btns_h & WPAD_CLASSIC_BUTTON_HOME) ||
-			(userInput[i].wiidrcdata.btns_h & WIIDRC_BUTTON_HOME)
+			(userInput[i].wiidrcdata.btns_h & WIIDRC_BUTTON_HOME) ||
+			(userInput[i].wpad->btns_h & WPAD_CLASSIC_BUTTON_PLUS &&
+			userInput[i].wpad->btns_h & WPAD_CLASSIC_BUTTON_A &&
+			userInput[i].wpad->btns_h & WPAD_CLASSIC_BUTTON_B &&
+			userInput[i].wpad->btns_h & WPAD_CLASSIC_BUTTON_MINUS)
 			#endif
 		)
 		{
@@ -757,16 +768,15 @@ bool MenuRequested()
  ***************************************************************************/
 void ReportButtons ()
 {
-	int i, j;
+	int i;
 
 	UpdatePads();
 
 	Settings.TurboMode = (
 		userInput[0].pad.substickX > 70 ||
 		userInput[0].WPAD_StickX(1) > 70 ||
-		userInput[0].wpad->btns_h & WPAD_CLASSIC_BUTTON_ZL ||
 		userInput[0].wiidrcdata.substickX > 45
-	);	// RIGHT on c-stick and on classic controller right joystick
+	);	// RIGHT on c-stick and Wii Classic Controller/Wii U Pro/Wii U Pro Gamepad right stick
 
 	if(Settings.TurboMode) {
 		Settings.SoundSync = false;
@@ -776,18 +786,21 @@ void ReportButtons ()
 	}
 
 	/* Check for menu:
-	 * CStick left
-	 * OR "A+B+Start+Z" (eg. Homebrew/Adapted SNES controllers)
-	 * OR "Home" on the wiimote or classic controller
-	 * OR Left on classic right analog stick
+	 * Gamecube c-stick left
+	 * OR "A+B+Start+Z" on the Gamecube controller ports (eg. Homebrew/Adapted NES-SNES controllers)
+	 * OR "Home" on the Wiimote or Wii Classic Controller
+	 * OR "Select+Start+A+B" on Wiimote controller extensions (eg. NES/SNES/3rd party controllers)
 	 */
 	if(MenuRequested())
 		ScreenshotRequested = 1; // go to the menu
 
-	j = (Settings.MultiPlayer5Master == true ? 4 : 2);
+	int numControllers = (Settings.MultiPlayer5Master == true ? 4 : 2);
 
-	for (i = 0; i < j; i++)
-		decodepad (i);
+	for (i = 0; i < 4; i++) {
+		if(playerMapping[i] < numControllers) {
+			decodepad (i, playerMapping[i]);
+		}
+	}
 }
 
 void SetControllers()
@@ -928,8 +941,8 @@ void SetDefaultButtonMap ()
 #ifdef HW_RVL
 char* GetUSBControllerInfo()
 {
-    static char info[70];
-    snprintf(info, 70, "Retrode: %s, XBOX360: %s", Retrode_Status(), XBOX360_Status());
+    static char info[100];
+    snprintf(info, 100, "Retrode: %s, XBOX360: %s, Hornet: %s, Mayflash: %s", Retrode_Status(), XBOX360_Status(), Hornet_Status(), Mayflash_Status());
     return info;
 }
 #endif

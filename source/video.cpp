@@ -18,6 +18,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ogc/texconv.h>
+#include <ogc/machine/processor.h>
 
 #include "snes9xgx.h"
 #include "menu.h"
@@ -120,9 +121,9 @@ static GXRModeObj TV_239p =
 	512,             // fbWidth
 	239,             // efbHeight
 	239,             // xfbHeight
-	(VI_MAX_WIDTH_PAL - 640)/2,         // viXOrigin
+	(VI_MAX_WIDTH_PAL - 644)/2,         // viXOrigin
 	(VI_MAX_HEIGHT_PAL/2 - 478/2)/2,        // viYOrigin
-	640,             // viWidth
+	644,             // viWidth
 	478,             // viHeight
 	VI_XFBMODE_SF,   // xFBmode
 	GX_FALSE,        // field_rendering
@@ -155,9 +156,9 @@ static GXRModeObj TV_478i =
 	512,             // fbWidth
 	478,             // efbHeight
 	478,             // xfbHeight
-	(VI_MAX_WIDTH_PAL - 640)/2,         // viXOrigin
+	(VI_MAX_WIDTH_PAL - 644)/2,         // viXOrigin
 	(VI_MAX_HEIGHT_PAL - 478)/2,        // viYOrigin
-	640,             // viWidth
+	644,             // viWidth
 	478,             // viHeight
 	VI_XFBMODE_DF,   // xFBmode
 	GX_FALSE,         // field_rendering
@@ -192,9 +193,9 @@ static GXRModeObj TV_224p =
 	512,             // fbWidth
 	224,             // efbHeight
 	224,             // xfbHeight
-	(VI_MAX_WIDTH_NTSC - 640)/2,	// viXOrigin
+	(VI_MAX_WIDTH_NTSC - 644)/2,	// viXOrigin
 	(VI_MAX_HEIGHT_NTSC/2 - 448/2)/2,	// viYOrigin
-	640,             // viWidth
+	644,             // viWidth
 	448,             // viHeight
 	VI_XFBMODE_SF,   // xFBmode
 	GX_FALSE,        // field_rendering
@@ -227,9 +228,9 @@ static GXRModeObj TV_448i =
 	512,             // fbWidth
 	448,             // efbHeight
 	448,             // xfbHeight
-	(VI_MAX_WIDTH_NTSC - 640)/2,        // viXOrigin
+	(VI_MAX_WIDTH_NTSC - 644)/2,        // viXOrigin
 	(VI_MAX_HEIGHT_NTSC - 448)/2,       // viYOrigin
-	640,             // viWidth
+	644,             // viWidth
 	448,             // viHeight
 	VI_XFBMODE_DF,   // xFBmode
 	GX_FALSE,         // field_rendering
@@ -552,6 +553,14 @@ InitGCVideo ()
 	xfb[1] = (u32 *) MEM_K0_TO_K1 (xfb[1]);
 
 	GXRModeObj *rmode = FindVideoMode();
+
+#ifdef HW_RVL
+if (CONF_GetAspectRatio() == CONF_ASPECT_16_9 && (*(u32*)(0xCD8005A0) >> 16) == 0xCAFE) // Wii U
+{
+	write32(0xd8006a0, 0x30000004), mask32(0xd8006a8, 0, 2);
+}
+#endif
+
 	SetupVideoMode(rmode);
 #ifdef HW_RVL
 	InitLUTs();	// init LUTs for hq2x

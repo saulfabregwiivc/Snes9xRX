@@ -453,7 +453,7 @@ void CreateAppPath(char * origpath)
 	int pos = 0;
 
 	// replace fat:/ with sd:/
-	if(strncmp(path, "fat:/", 5) == 0)
+	if(strncmp(path, "fat:/", 5) == 0 || strncmp(path, "sd1:/", 5) == 0)
 	{
 		pos++;
 		path[1] = 's';
@@ -557,7 +557,8 @@ static bool ParseDirEntries()
 
 				if(	strcasecmp(ext, "smc") != 0 && strcasecmp(ext, "fig") != 0 &&
 					strcasecmp(ext, "sfc") != 0 && strcasecmp(ext, "swc") != 0 &&
-					strcasecmp(ext, "zip") != 0 && strcasecmp(ext, "7z") != 0)
+					strcasecmp(ext, "bs") != 0 && strcasecmp(ext, "zip") != 0 &&
+					strcasecmp(ext, "7z") != 0)
 					continue;
 			}
 		}
