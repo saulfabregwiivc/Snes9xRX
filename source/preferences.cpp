@@ -161,8 +161,6 @@ preparePrefsData ()
 	createXMLSetting("WiimoteOrientation", "Wiimote Orientation", toStr(GCSettings.WiimoteOrientation));
 #endif
 	createXMLSetting("ExitAction", "Exit Action", toStr(GCSettings.ExitAction));
-	createXMLSetting("MusicVolume", "Music Volume", toStr(GCSettings.MusicVolume));
-	createXMLSetting("SFXVolume", "Sound Effects Volume", toStr(GCSettings.SFXVolume));
 	createXMLSetting("DisplayVM", "Display Virtual Memory", toStr(GCSettings.DisplayVM));
 	createXMLSetting("language", "Language", toStr(GCSettings.language));
 	createXMLSetting("PreviewImage", "Preview Image", toStr(GCSettings.PreviewImage));
@@ -352,8 +350,6 @@ decodePrefsData ()
 
 			loadXMLSetting(&GCSettings.WiimoteOrientation, "WiimoteOrientation");
 			loadXMLSetting(&GCSettings.ExitAction, "ExitAction");
-			loadXMLSetting(&GCSettings.MusicVolume, "MusicVolume");
-			loadXMLSetting(&GCSettings.SFXVolume, "SFXVolume");
 			loadXMLSetting(&GCSettings.DisplayVM, "DisplayVM");
 			loadXMLSetting(&GCSettings.language, "language");
 			loadXMLSetting(&GCSettings.PreviewImage, "PreviewImage");
@@ -401,10 +397,6 @@ void FixInvalidSettings()
 		GCSettings.xshift = 0;
 	if(!(GCSettings.yshift > -50 && GCSettings.yshift < 50))
 		GCSettings.yshift = 0;
-	if(!(GCSettings.MusicVolume >= 0 && GCSettings.MusicVolume <= 100))
-		GCSettings.MusicVolume = 20;
-	if(!(GCSettings.SFXVolume >= 0 && GCSettings.SFXVolume <= 100))
-		GCSettings.SFXVolume = 40;
 	if(GCSettings.language < 0 || GCSettings.language >= LANG_LENGTH)
 		GCSettings.language = LANG_ENGLISH;
 	if(GCSettings.Controller > CTRL_PAD4 || GCSettings.Controller < CTRL_MOUSE)
@@ -460,8 +452,6 @@ DefaultSettings ()
 	GCSettings.WiimoteOrientation = 0;
 	GCSettings.ExitAction = 0; // Auto
 	GCSettings.AutoloadGame = 0;
-	GCSettings.MusicVolume = 20;
-	GCSettings.SFXVolume = 40;
 	GCSettings.DisplayVM = 0; // Disabled
 	GCSettings.PreviewImage = 0;
 	
