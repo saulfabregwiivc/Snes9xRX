@@ -112,36 +112,22 @@ InitAudio ()
 }
 
 /****************************************************************************
- * SwitchAudioMode
+ * AudioMode
  *
- * Switches between menu sound and emulator sound
+ * Emulator sound
  ***************************************************************************/
 void
-SwitchAudioMode(int mode)
+AudioMode(int mode)
 {
-	if(mode == 0) // emulator
-	{
-		#ifndef NO_SOUND
-		ASND_Pause(1);
-		ASND_End();
-		AUDIO_StopDMA();
-		AUDIO_RegisterDMACallback(NULL);
-		DSP_Halt();
-		AUDIO_RegisterDMACallback(DMACallback);
-		#endif
-		S9xSetSamplesAvailableCallback(S9xAudioCallback, NULL);
-	}
-	else // menu
-	{
-		S9xSetSamplesAvailableCallback(NULL, NULL);
-		#ifndef NO_SOUND
-		DSP_Unhalt();
-		ASND_Init();
-		ASND_Pause(0);
-		#else
-		AUDIO_StopDMA();
-		#endif
-	}
+	#ifndef NO_SOUND
+	ASND_Pause(1);
+	ASND_End();
+	AUDIO_StopDMA();
+	AUDIO_RegisterDMACallback(NULL);
+	DSP_Halt();
+	AUDIO_RegisterDMACallback(DMACallback);
+	#endif
+	S9xSetSamplesAvailableCallback(S9xAudioCallback, NULL);
 }
 
 /****************************************************************************
