@@ -14,9 +14,6 @@
 
 #include <gccore.h>
 
-// Fonts
-#include "font_ttf.h"
-
 // Languages
 #include "jp_lang.h"
 #include "en_lang.h"
