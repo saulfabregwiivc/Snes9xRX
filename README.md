@@ -1,8 +1,11 @@
 # Snes9x RX
-https://github.com/niuus/snes9xrx 
+https://github.com/niuus/snes9xrx/
 
 Based/forked from:
-https://github.com/dborth/snes9xgx   
+https://github.com/snes9xgit/
+
+https://github.com/dborth/snes9xgx/
+
 (Under GPL License)
 
 Snes9x RX is a Super Nintendo™ / Super Famicom emulator for the Nintendo Wii.
@@ -19,15 +22,19 @@ Wii homebrew is WiiBrew (www.wiibrew.org).
 * Wiimote, Nunchuk, Wii Classic/Classic Pro, and Gamecube controller support
 * Wii U Pro, Wii U GamePad, NES and SNES Classic controller support
 * Retrode 2 USB adapter support, so you can use the real controllers!
+* Mayflash 2-port SNES USB adapter support!
 * Wired Xbox 360 Controller support (autodetected when in-game)
+* Speedlink Hornet Gamepad USB
 * Experimental DualShock 3 support
 * SNES Superscope, Justifier, Mouse peripherals emulation support
 * Cheat support
 * Auto Load/Save Game Snapshots and SRAM
 * Custom controller configurations
 * SD, USB, DVD, SMB, Zip, and 7z support
+* UStealth USB devices support
 * Autodetect PAL/NTSC, 16:9 widescreen support
-* Original / Filtered (Sharp & Soft) / Unfiltered video modes
+* Video modes: Original (240p) / Filtered (Sharp & Soft) / Unfiltered
+* Filtering modes: None, Scale2x, HQ2x, Scanlines 25%/50%
 * Turbo Mode - up to 2x the normal speed
 * Zoom option to zoom in/out
 * Available in various skins/colors
@@ -36,12 +43,54 @@ Wii homebrew is WiiBrew (www.wiibrew.org).
 
 ## RECENT CHANGELOG
 
-[4.9.0 - July 15, 2020]
-* Reduce save buffer size on GCN. Should fix preview glitch. [Tantric]
-* Snes9x - Increase SRAM size to 512KB. [cout]
-* Wii U widescreen patch, report whether Wii U CPU is full speed. [Daryl]
-Use the Credits section to see it (press the Snes9xRX logo on the main menu)
-* Fix some warnings. [bearoso]
+[5.0.0 - Abril 22, 2022]
+* Use I4 instead of RGBA8 for fonts (much less memory). [Daryl]
+* When unable to load the default rom directory, just drop into device
+root. Don't show an error when unable to find a load device. [Daryl]
+* Silence a few warnings. [Daryl]
+* Remove S9xChooseMovieFilename. [bearoso]
+* Remove S9xSetPalette. [bearoso]
+* Remove S9xChooseFilename. [bearoso]
+This is integration of the frontend with the core. Disable
+the snapshot button mappings that use it. Any frontend should
+implement those port commands its own.
+* Load cover images directly from file instead of an
+intermediary buffer. [Daryl]
+* Correct aspect ratio by changing viWidth to 644. [vaguerant]
+* Add ability to change the player mapped to a
+connected (Wireless) controller. [Tantric]
+* Change max game image dimensions to 640x480, fix bug
+in png loading. [Tantric]
+* Add support for Mayflash 2-port SNES USB adapter. [EthanArmbrust]
+* New scanlines filter setting. (thanks Tanooki16!)
+Now nicknamed 50% and 25% for RX, I added the option to select between both,
+so you can choose whether you like darker scanlines (old method)
+or subtler ones (new method).
+* Add A+B+SELECT+START for back to menu on Wiimote controller extensions.
+Based on the similar commit by Tantric for Snes9xGX.
+* If arguments are passed to the emu to autoboot a game, then the main
+menu button should be labelled Exit, and leave the emu instead of going
+back to the main menu. Cleanup autoboot code. [Tantric]
+* Add support for mapping more than 128KByte SRAM. [cout/qwertymodo]
+* Add 128KByte SRAM support in cheats. [qwertymodo]
+* New Scale2x filter added. (thanks Tanooki16!)
+Originally developed by Andrea Mazzoleni for the AdvanceMAME project.
+http://www.scale2x.it/
+* Add support for Speedlink Hornet Gamepad USB. (thanks revvv!)
+* Prevent cheat name overflow. [Daryl]
+* Support forwarders that pass in sd1:/ [Tantric]
+* Add ability of FastROM hacks to use SuperFX. [bladeoner]
+* Set SRAM initialization to set whole buffer. [bearoso]
+...not just a few bytes. Add a TODO comment at allocation.
+These never change, so they should ideally be static.
+* Add heuristic to detect 6MB Earthbound hack.
+Makes "Mother 2 Deluxe" romhack playable.
+* UStealth support.
+* Wii 480p video fix. [Extrems]
+* More 3rd party controllers support. [Tantric]
+Fix 3rd party classic controllers that don't send calibration data.
+For those controllers, use default values.
+* Important readme updates.
 
 [older update history at the bottom]
 
@@ -54,7 +103,6 @@ SD Card. It comes pre-packaged in the Homebrew Channel format (which you
 will use to launch the emulator). Once you've copied the directories to
 your SD Card you will need to place your ROM image(s) into "\snes9xgx\roms"
 directory. Optionally, you can place cheat code files and artwork/covers
-(both of those categories need to be in PNG format, 316x224 resolution)
 in their respectively named folders inside the "\snes9xgx\" directory.
 If they are not present, the folders will be created at second run, in case
 you want to acquire the files later. Once you are done, you can proceed to
@@ -109,6 +157,7 @@ supports battery saving) and the other is Snapshots, which are real time saves.
 Real time saves allow you to save your game in it's current state and resume it
 at a later time.
 
+```
 	• Load Device -	SD, USB, DVD, Network and Auto Detect
 	
 	• Save Device - SD, USB, Network and Auto Detect
@@ -116,6 +165,7 @@ at a later time.
 	• Auto Load - SRAM, Snapshot and Off
 
 	• Auto Save - SRAM, Snapshot, Both and Off
+```
 
 You can also toggle the option to append "Auto" into the filename of all the
 automatic SRAM saves that the emulator creates whenever you play a supported
@@ -157,9 +207,11 @@ supported games inside the archive.
 
 Once you load a game, you can access a special menu by pressing the 
 Wii/Wii U controller's "Home" button / Gamecube controller's C-stick left.
-If you're using any of the other input controllers or a special converter,
-simply press the button combination Start+A+B+Select. This will bring up
-the Save, Load, Delete, Game Settings and Reset options.
+If you're using any other input controller on the Wiimote extension that
+doesn't have a "Home" button, or a special converter to use other types of
+controllers on the Gamecube ports, simply press the button combination
+Start+A+B plus Select/Z. This will bring up the Save, Load, Delete,
+Game Settings and Reset options.
 
 From this menu you can also return to the Choose Game screen by selecting
 "Main Menu". To leave the menu and resume game play, select "Close".
@@ -179,12 +231,12 @@ covered in the following sections.
 ## GAME SETTINGS
 
 ### BUTTON MAPPINGS
-	
+
 Once in the Button Mappings settings menu, you'll have the option to configure
 almost all the controllers already supported (except the Retrode 2 USB, Xbox
 360 controller or the DualShock 3). You can also configure SNES peripherals
 like the Mouse, Super Scope, and the Konami's Justifier, although you can
-only alter the mappings for these in the GameCube controller and Wiimote
+only alter the mappings for these on the GameCube controller and Wiimote
 sections. Once you select a controller to configure, you will be presented
 with which input device you would like to remap. To set any buttons, simply
 click on the input device you wish to use and then pick the button. After
@@ -192,11 +244,11 @@ you select a button to configure, Snes9x RX will prompt you to press the
 button you want to assign to the button you've selected. Below is a list of
 each controller, followed by the input devices and the default values
 for those devices.
-	
+
 ### SNES Controller
-		
+
 		• GameCube Controller
-			
+
 			A = A
 			B = B
 			X = X
@@ -209,9 +261,9 @@ for those devices.
 			DOWN = DOWN
 			LEFT = LEFT
 			RIGHT = RIGHT
-			
+
 		• Wiimote
-		
+
 			A = B
 			B = 2
 			X = 1
@@ -222,7 +274,7 @@ for those devices.
 			DOWN = DOWN
 			LEFT = LEFT
 			RIGHT = RIGHT
-		
+
 		• Wii Classic Controller
 		• Wii Classic Controller Pro
 		• Wii U Pro Controller
@@ -241,8 +293,8 @@ for those devices.
 			LEFT = LEFT
 			RIGHT = RIGHT
 
-		•	Wiimote Nunchuck + Wiimote
-		
+		• Wiimote Nunchuck + Wiimote
+
 			A = A
 			B = B
 			X = C
@@ -256,8 +308,8 @@ for those devices.
 			LEFT = LEFT
 			RIGHT = RIGHT
 
-		•	Xbox 360 Controller (wired)
-		
+		• Xbox 360 Controller (wired)
+
 			A = B
 			B = A
 			X = Y
@@ -274,8 +326,8 @@ for those devices.
 			Right Analog Stick = Mapped to Y, X, B, A
 			Swap controller port = XBOX GUIDE BUTTON
 
-		•	DualShock 3 Controller (wired)
-		
+		• DualShock 3 Controller (wired)
+
 			A = Circle
 			B = Cross
 			X = Triangle
@@ -291,14 +343,14 @@ for those devices.
 			Left Analog Stick = D-pad directions
 
 ### SNES Mouse
-	
+
 		• GameCube Controller
-		
+
 			LEFT BUTTON = A
 			RIGHT BUTTON = B
-		
+
 		• Wiimote
-		
+
 			LEFT BUTTON = A
 			RIGHT BUTTON = B
 
@@ -322,7 +374,7 @@ for those devices.
 			PAUSE = START
 
 		• Wiimote
-		
+
 			FIRE = B
 			AIM OFFSCREEN = A
 			CURSOR = MINUS
@@ -343,13 +395,13 @@ for those devices.
 			PAUSE = PLUS
 
 ### Justifier
-	
+
 		• GameCube Controller
-		
+
 			FIRE = A
 			AIM OFFSCREEN = B
 			START = START
-		
+
 		• Wiimote
 
 			FIRE = B
@@ -369,6 +421,7 @@ for those devices.
 
 Here you can choose between audio interpolation filters:
 
+```
 • Gaussian: the most accurate representation to how the console sounded.
 Might produce better bass in certain sound effects. However, the sound
 will overall be a bit more muffled or soft.
@@ -377,6 +430,7 @@ will overall be a bit more muffled or soft.
 while being a bit clearer, depending on your taste.
 
 • None: entirely disables interpolation.
+```
 
 ### VIDEO
 
@@ -385,20 +439,24 @@ including the Rendering method, Scaling, Filtering, Screen Zoom and Screen
 Position. You can toggle the options for the first three selections by 
 clicking on them.
 
+```
 • Rendering - Unfiltered
             - Filtered (Soft)
-			- Filtered (Sharp)
-			- Original
-			- Filtered
-          
-• Scaling 	- Default
-			- 16:9 Correction
+            - Filtered (Sharp)
+            - Original
+            - Filtered
+
+• Scaling   - Default
+            - 16:9 Correction
 
 • Filtering - None
-			- hq2x
-			- hq2x Soft
-			- hq2x Bold
-			- Scanlines
+            - Scale2x
+            - hq2x
+            - hq2x Soft
+            - hq2x Bold
+            - Scanlines 25%
+	    - Scanlines 50%
+```
 
 To use the "Original" rendering, make sure your LCD/LED display supports
 240p, else you will have a black screen upon returning to the game, or
@@ -406,8 +464,9 @@ your display will warn you that there is no signal. This is the most
 accurate rendition for the resolution from the original Super Nintendo,
 and will give you crisp unfiltered pixels, most ideally suited to enjoy
 on CRT TVs or monitors. Can even be coupled with modern TVs for use with
-scanline generators or line doublers.
+scanline generators or line doublers (Framemeister, OSSC, RetroTink).
 
+```
 • Screen Zoom: this will bring up a menu where you can adjust the Zoom level
 by using the clickable left and right arrows. The default setting is 100%.
 
@@ -432,6 +491,7 @@ the GSU-1 & GSU-2 -most commonly known as the SuperFX chip- on every
 supported game, which improves games with faster or smoother framerates.
 You can have it at the Default chip speed (10.7 MHz), or set it to 20 MHz,
 40 MHz, or 60 MHz.
+```
 
 ### CONTROLLER
 
@@ -483,17 +543,16 @@ by now. You can do this before loading any game, for example.
 
 TurboMode increases the playback speed of the game by about 2x. To use it,
 simply press and hold right on the C-stick (yellow control stick on the
-Gamecube controller), the right analog stick (Wii Classic Controller/Pro),
-or the ZL button (Wii U Pro Controller) for as long as you want gameplay
-to be faster. Release the stick/button whenever you want normal playback
-speed to resume.
-
+Gamecube controller) or the right analog stick on the Wii Classic Controller
+/ Wii Classic Controller Pro / Wii U Pro Controller for as long as you want
+gameplay to be faster. Release the stick/button whenever you want normal
+playback speed to resume.
 
 
 ## IMPORTING AND EXPORTING SRAM
 
 Snes9x RX now includes the ability to load SRAM from Snes9x on other
-platforms (Mac/PC/Linux/etc) and to save back to those platforms. 
+platforms (Mac/PC/Linux/etc) and to save back to those platforms.
 
 To load a SRAM file on the Wii or Gamecube from another platform, ensure the
 name of the SRM file matches the filename of the ROM (except with an SRM 
@@ -504,7 +563,41 @@ copy the saved SRAM file to the other platform. You may have to rename the
 file to be what that version of snes9x expects it to be.
 
 
+## AUTOBOOT MODE
+
+Snes9x RX also sports an autoboot feature, for special use with custom
+forwarders made to look like Wii Virtual Console channels, or individual
+entries on your Homebrew Channel. To make use of this feature, just add
+the following lines to your meta.xml right between ```</long_description>```
+and ```</app>```, like the following example:
+
+```
+   </long_description>
+   <arguments>
+   <arg>sd:/snes9xgx/roms</arg>
+   <arg>game.sfc</arg>
+   </arguments>
+   <ahb_access/>
+ </app>
+```
+
+Use "sd:" OR "usb:" according to your media, adjust the path to the specific
+location of the ROM on your device, and replace "game.sfc" with the specific
+name of your game file (can be a .zip, too).
+
+Make sure to set your configuration to your liking before using autoboot,
+as you won't be able to change the ones that are only accesible inside the
+Settings menu at the emulator's Main Menu / Game browser.
+
+
 ## UPDATE HISTORY
+
+[4.9.0 - July 15, 2020]
+* Reduce save buffer size on GCN. Should fix preview glitch. [Tantric]
+* Snes9x - Increase SRAM size to 512KB. [cout]
+* Wii U widescreen patch, report whether Wii U CPU is full speed. [Daryl]
+Use the Credits section to see it (press the Snes9xRX logo on the main menu)
+* Fix some warnings. [bearoso]
 
 [4.8.0 - March 10, 2020]
 * Language updates for Spanish, French, Portuguese.
@@ -1380,6 +1473,9 @@ changes to the emulator settings again and save them.
 
                       SNES9X RX Project Page
                       https://github.com/niuus/Snes9xRX
+
+                      SNES9X Project Page
+                      https://github.com/snes9xgit/
 
                       SNES9X GX Project Page
                       https://github.com/dborth/snes9xgx
