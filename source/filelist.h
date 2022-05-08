@@ -15,6 +15,7 @@
 #include <gccore.h>
 
 // Languages
+#include "jp_lang.h"
 #include "en_lang.h"
 #include "de_lang.h"
 #include "fr_lang.h"
