@@ -837,13 +837,13 @@ static void WindowCredits(void * ptr)
 	txt[i]->SetPosition(50,y); i++;
 	txt[i] = new GuiText("NiuuS, bladeoner, Zopenko");
 	txt[i]->SetPosition(330,y); i++; y+=24;
-	txt[i] = new GuiText("Menu artwork");
+	txt[i] = new GuiText("Menu artwork and Logo");
 	txt[i]->SetPosition(50,y); i++;
 	txt[i] = new GuiText("NiuuS, the3seashells");
 	txt[i]->SetPosition(330,y); i++; y+=24;
-	txt[i] = new GuiText("Logo");
+	txt[i] = new GuiText("Unofficial mod");
 	txt[i]->SetPosition(50,y); i++;
-	txt[i] = new GuiText("NiuuS");
+	txt[i] = new GuiText("saulfabreg");
 	txt[i]->SetPosition(330,y); i++; y+=48;
 
 	txt[i] = new GuiText("Snes9x GX GameCube");
