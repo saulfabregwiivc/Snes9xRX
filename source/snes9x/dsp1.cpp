@@ -522,7 +522,7 @@ static void DSP1_Op0C (void)
 
 static void DSP1_Parameter (int16 Fx, int16 Fy, int16 Fz, int16 Lfe, int16 Les, int16 Aas, int16 Azs, int16 *Vof, int16 *Vva, int16 *Cx, int16 *Cy)
 {
-	const int16	MaxAZS_Exp[16] =
+	static const int16	MaxAZS_Exp[16] =
 	{
 		0x38b4, 0x38b7, 0x38ba, 0x38be, 0x38c0, 0x38c4, 0x38c7, 0x38ca,
 		0x38ce,	0x38d0, 0x38d4, 0x38d7, 0x38da, 0x38dd, 0x38e0, 0x38e4
@@ -1468,7 +1468,7 @@ void DSP1SetByte (uint8 byte, uint16 address)
 							DSP1.Op11m  = (int16) (DSP1.parameters[0] | (DSP1.parameters[1] << 8));
 							DSP1.Op11Zr = (int16) (DSP1.parameters[2] | (DSP1.parameters[3] << 8));
 							DSP1.Op11Yr = (int16) (DSP1.parameters[4] | (DSP1.parameters[5] << 8));
-							DSP1.Op11Xr = (int16) (DSP1.parameters[7] | (DSP1.parameters[7] << 8));
+							DSP1.Op11Xr = (int16) (DSP1.parameters[6] | (DSP1.parameters[7] << 8));
 
 							DSP1_Op11();
 							break;

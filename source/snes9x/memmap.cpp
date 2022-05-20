@@ -1015,7 +1015,7 @@ void CMemory::Deinit (void)
 		ROM = NULL;
 	}
 
-	for (int t = 0; t < 7; t++)
+	for (int t = 0; t <= TILE_8BIT; t++)
 	{
 		if (IPPU.TileCache[t])
 		{
@@ -2215,6 +2215,9 @@ void CMemory::InitROM (void)
 		// SPC7110
 		case 0xF93A:
 			Settings.SPC7110RTC = TRUE;
+			Settings.SPC7110    = TRUE;
+			S9xInitSPC7110();
+			break;
 		case 0xF53A:
 			Settings.SPC7110 = TRUE;
 			S9xInitSPC7110();
