@@ -475,7 +475,7 @@ int main(int argc, char *argv[])
 		GCSettings.AutoloadGame = AutoloadGame(argv[1], argv[2]);
 		autoboot = GCSettings.AutoloadGame;
 	}
-	
+
 	switch (GCSettings.sfxOverclock)
 	{
 		case 0: Settings.SuperFXSpeedPerLine = 0.417 * 10.5e6; break;
@@ -497,7 +497,6 @@ int main(int argc, char *argv[])
 		case 2: Settings.InterpolationMethod = DSP_INTERPOLATION_NONE; break;
 	}
 
-
 	while (1) // main loop
 	{
 		if(!autoboot) {
@@ -511,6 +510,7 @@ int main(int argc, char *argv[])
 						MainMenu(MENU_GAMESELECTION);
 				else
 						MainMenu(MENU_GAME);
+
 		}
 
 #ifdef HW_RVL
