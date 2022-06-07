@@ -860,7 +860,7 @@ static void WindowCredits(void * ptr)
 	txt[i] = new GuiText("Snes9x Team");
 	txt[i]->SetPosition(330,y); i++; y+=24;
 
-	txt[i] = new GuiText("libogc / devkitPPC");
+	txt[i] = new GuiText("libOGC / devkitPPC");
 	txt[i]->SetPosition(50,y); i++;
 	txt[i] = new GuiText("shagkur & wintermute");
 	txt[i]->SetPosition(330,y); i++; y+=24;
