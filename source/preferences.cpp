@@ -150,9 +150,17 @@ preparePrefsData ()
 	createXMLSetting("widescreen", "Aspect Ratio Correction", toStr(GCSettings.widescreen));
 	createXMLSetting("crosshair", "Crosshair", toStr(GCSettings.crosshair));
 	createXMLSetting("FilterMethod", "Filter Method", toStr(GCSettings.FilterMethod));
+	createXMLSetting("ShowFrameRate", "Show Framerate", toStr(GCSettings.ShowFrameRate));
+	createXMLSetting("ShowLocalTime", "Show Local Time", toStr(GCSettings.ShowLocalTime));
 	createXMLSetting("xshift", "Horizontal Video Shift", toStr(GCSettings.xshift));
 	createXMLSetting("yshift", "Vertical Video Shift", toStr(GCSettings.yshift));
 	createXMLSetting("sfxOverclock", "SuperFX Overclock", toStr(GCSettings.sfxOverclock));
+	createXMLSetting("TurboModeEnabled", "Turbo Mode Enabled", toStr(GCSettings.TurboModeEnabled));
+	createXMLSetting("TurboModeButton", "Turbo Mode Button", toStr(GCSettings.TurboModeButton));
+
+	createXMLSection("Audio", "Audio Settings");
+
+	createXMLSetting("ReverseStereo", "Stereo Reverse", toStr(GCSettings.ReverseStereo));
 	createXMLSetting("Interpolation", "Interpolation", toStr(GCSettings.Interpolation));
 
 	createXMLSection("Menu", "Menu Settings");
@@ -166,6 +174,7 @@ preparePrefsData ()
 	createXMLSetting("DisplayVM", "Display Virtual Memory", toStr(GCSettings.DisplayVM));
 	createXMLSetting("language", "Language", toStr(GCSettings.language));
 	createXMLSetting("PreviewImage", "Preview Image", toStr(GCSettings.PreviewImage));
+	createXMLSetting("HideSRAMSaving", "Hide SRAM Saving", toStr(GCSettings.HideSRAMSaving));
 	
 	createXMLSection("Controller", "Controller Settings");
 
@@ -337,11 +346,16 @@ decodePrefsData ()
 			loadXMLSetting(&GCSettings.widescreen, "widescreen");
 			loadXMLSetting(&GCSettings.crosshair, "crosshair");
 			loadXMLSetting(&GCSettings.FilterMethod, "FilterMethod");
+			loadXMLSetting(&GCSettings.ShowFrameRate, "ShowFrameRate");
+			loadXMLSetting(&GCSettings.ShowLocalTime, "ShowLocalTime");
 			loadXMLSetting(&GCSettings.xshift, "xshift");
 			loadXMLSetting(&GCSettings.yshift, "yshift");
+			loadXMLSetting(&GCSettings.TurboModeEnabled, "TurboModeEnabled");
+			loadXMLSetting(&GCSettings.TurboModeButton, "TurboModeButton");
 
 			// Audio Settings
 
+			loadXMLSetting(&GCSettings.ReverseStereo, "ReverseStereo");
 			loadXMLSetting(&GCSettings.Interpolation, "Interpolation");
 
 			// Emulation Settings
@@ -357,6 +371,7 @@ decodePrefsData ()
 			loadXMLSetting(&GCSettings.DisplayVM, "DisplayVM");
 			loadXMLSetting(&GCSettings.language, "language");
 			loadXMLSetting(&GCSettings.PreviewImage, "PreviewImage");
+			loadXMLSetting(&GCSettings.HideSRAMSaving, "HideSRAMSaving");
 
 			// Controller Settings
 
@@ -464,6 +479,7 @@ DefaultSettings ()
 	GCSettings.SFXVolume = 40;
 	GCSettings.DisplayVM = 0; // Disabled
 	GCSettings.PreviewImage = 0;
+	GCSettings.HideSRAMSaving = 0;
 	
 #ifdef HW_RVL
 	GCSettings.language = CONF_GetLanguage();
@@ -498,11 +514,11 @@ DefaultSettings ()
 	Settings.SoundSync = true;
 	Settings.SixteenBitSound = true;
 	Settings.Stereo = true;
-	Settings.ReverseStereo = true;
 	Settings.SoundPlaybackRate = 48000;
 	Settings.SoundInputRate = 31920;
 	Settings.DynamicRateControl = true;
 	Settings.DynamicRateLimit = 1;
+	GCSettings.ReverseStereo = 1; // Enabled to fix inverted L/R audio channels
 
 	// Interpolation Method
 	GCSettings.Interpolation = 0;
@@ -513,10 +529,10 @@ DefaultSettings ()
 	Settings.SupportHiRes = true;
 	Settings.SkipFrames = AUTO_FRAMERATE;
 	Settings.TurboSkipFrames = 19;
-	Settings.DisplayFrameRate = false;
 	Settings.AutoDisplayMessages = false;
 	Settings.InitialInfoStringTimeout = 200; // # frames to display messages for
-	Settings.DisplayTime = false;
+	GCSettings.ShowFrameRate = 0;
+	GCSettings.ShowLocalTime = 0;
 
 	// Frame timings in 50hz and 60hz cpu mode
 	Settings.FrameTimePAL = 20000;
@@ -526,6 +542,8 @@ DefaultSettings ()
 	/* Initialize SuperFX CPU to normal speed by default */
 	Settings.SuperFXSpeedPerLine = 0.417 * 10.5e6;
 
+	GCSettings.TurboModeEnabled = 1; // Enabled by default
+	GCSettings.TurboModeButton = 0; // Default is Right Analog Stick (0)
 }
 
 /****************************************************************************
